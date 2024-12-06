@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Film, Heart, TrendingUp, Sparkles } from "lucide-react";
 import { fetchTrendingMovies } from '../lib/tmdb';
 import type { Movie, Mood } from './types/movie';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
   const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentBackdrop, setCurrentBackdrop] = useState<string | null>(null);
+
+  const router = useRouter();
+  const moodSectionRef = useRef<HTMLElement>(null);
 
   const moods: Mood[] = [
     { 
@@ -56,7 +60,7 @@ export default function HomePage() {
       try {
         setIsLoading(true);
         const data = await fetchTrendingMovies();
-        setTrendingMovies(data.results.slice(0, 3));
+        setTrendingMovies(data.results.slice(0, 6));
         
         // Set initial backdrop
         if (data.results[0]?.backdrop_path) {
@@ -78,6 +82,16 @@ export default function HomePage() {
     if (backdropPath) {
       setCurrentBackdrop(backdropPath);
     }
+  };
+
+
+  const handleStartJourney = () => {
+    moodSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleMoodClick = (mood: Mood) => {
+    router.push(`/recommendations?mood=${encodeURIComponent(mood.name)}`);
+    console.log(mood)
   };
 
   return (
@@ -119,7 +133,9 @@ export default function HomePage() {
               your <span className="text-yellow-400">mood</span> and elevates your moment.
             </p>
             
-            <button className="group bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-8 py-4 rounded-full font-semibold text-lg shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-orange-500/25 flex items-center gap-3">
+            <button
+            onClick={handleStartJourney} 
+            className="group bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-8 py-4 rounded-full font-semibold text-lg shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-orange-500/25 flex items-center gap-3">
               <Film className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
               Start Your Journey
               <span className="ml-1 text-yellow-200 group-hover:translate-x-1 transition-transform duration-300">→</span>
@@ -129,7 +145,7 @@ export default function HomePage() {
       </div>
 
       {/* Mood Selection */}
-      <section className="relative mb-32">
+      <section ref={moodSectionRef} className="relative mb-32">
         <div className="max-w-6xl mx-auto px-6">
           <div className="bg-gray-800/40 backdrop-blur-xl rounded-3xl p-10 shadow-2xl border border-gray-700/50 hover:border-gray-600/50 transition-colors">
             <h2 className="text-3xl font-semibold mb-8 text-gray-100">How are you feeling today?</h2>
@@ -137,6 +153,7 @@ export default function HomePage() {
               {moods.map((mood) => (
                 <button
                   key={mood.name}
+                  onClick={() => handleMoodClick(mood)}
                   className={`relative group overflow-hidden rounded-2xl aspect-square bg-gradient-to-br ${mood.gradient} p-6 transition-all duration-300 hover:scale-105 hover:shadow-lg`}
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300 bg-white" />

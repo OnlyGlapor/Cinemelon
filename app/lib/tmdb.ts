@@ -175,3 +175,53 @@ export async function discoverMovies({
 
   return response.json();
 }
+
+type Mood =
+  | 'Happy'
+  | 'Sad'
+  | 'Relaxed'
+  | 'Thoughtful'
+  | 'Thrilled'
+  | 'Romantic';
+
+type Movie = {
+  id: number;
+  title: string;
+  overview: string;
+  release_date: string;
+  genre_ids: number[];
+  poster_path: string | null;
+  backdrop_path: string | null;
+  vote_average: number;
+  vote_count: number;
+};
+
+type MoviesResponse = {
+  page: number;
+  results: Movie[];
+  total_pages: number;
+  total_results: number;
+};
+
+export async function fetchMoviesByMood(mood: Mood): Promise<MoviesResponse> {
+  const moodToGenreMap: Record<Mood, number[]> = {
+    Happy: [35, 10751], // Comedy, Family
+    Sad: [18], // Drama
+    Relaxed: [99, 10402], // Documentary, Music
+    Thoughtful: [36, 10749], // History, Romance
+    Thrilled: [28, 53], // Action, Thriller
+    Romantic: [10749], // Romance
+  };
+
+  const genreIds = moodToGenreMap[mood] || [];
+
+  const response = await fetch(
+    `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genreIds.join(',')}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch movies for mood: ${mood}`);
+  }
+
+  return response.json();
+}
