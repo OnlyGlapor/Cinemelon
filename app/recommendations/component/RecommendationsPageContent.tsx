@@ -19,11 +19,11 @@ import { fetchMovieRecommendations, fetchMoviesByMood } from '../../lib/tmdb';
 import type { Movie } from '../../types/movie';
 
 // Define the Mood type explicitly here to match the one from the API
-type Mood = 'Happy' | 'Sad' | 'Relaxed' | 'Thoughtful' | 'Thrilled' | 'Romantic';
+type Mood = 'Happy' | 'Sad' | 'Scared' | 'Cool' | 'Thoughtful' | 'Funny';
 
 // Type guard to check if a string is a valid Mood
 const isMood = (value: string | null): value is Mood => {
-  const validMoods: Mood[] = ['Happy', 'Sad', 'Relaxed', 'Thoughtful', 'Thrilled', 'Romantic'];
+  const validMoods: Mood[] = ['Happy', 'Sad', 'Scared', 'Cool', 'Thoughtful', 'Funny'];
   return value !== null && validMoods.includes(value as Mood);
 };
 

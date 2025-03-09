@@ -176,14 +176,6 @@ export async function discoverMovies({
   return response.json();
 }
 
-type Mood =
-  | 'Happy'
-  | 'Sad'
-  | 'Relaxed'
-  | 'Thoughtful'
-  | 'Thrilled'
-  | 'Romantic';
-
 type Movie = {
   id: number;
   title: string;
@@ -196,32 +188,121 @@ type Movie = {
   vote_count: number;
 };
 
-type MoviesResponse = {
-  page: number;
-  results: Movie[];
-  total_pages: number;
-  total_results: number;
+// Add or update the mood to genre/keyword mapping
+const moodToGenreKeywords: Record<string, { genres?: number[]; keywords?: number[] }> = {
+  "Happy": {
+    genres: [35, 10751], // Comedy, Family
+    keywords: [9717, 9716] // Feel-good, Happiness
+  },
+  "Sad": {
+    genres: [18], // Drama
+    keywords: [12392, 180547] // Tearjerker, Depression
+  },
+  "Scared": {
+    genres: [27, 53], // Horror, Thriller
+    keywords: [6152, 10349] // Suspense, Fear
+  },
+  "Cool": {
+    genres: [28, 12], // Action, Adventure
+    keywords: [9663, 33765] // Stylized, Badass
+  },
+  "Thoughtful": {
+    genres: [878, 99], // Science Fiction, Documentary
+    keywords: [156, 10339] // Philosophical, Thought-provoking
+  },
+  "Funny": {
+    genres: [35], // Comedy
+    keywords: [9715, 9714] // Humor, Slapstick
+  }
 };
 
-export async function fetchMoviesByMood(mood: Mood): Promise<MoviesResponse> {
-  const moodToGenreMap: Record<Mood, number[]> = {
-    Happy: [35, 10751], // Comedy, Family
-    Sad: [18], // Drama
-    Relaxed: [99, 10402], // Documentary, Music
-    Thoughtful: [36, 10749], // History, Romance
-    Thrilled: [28, 53], // Action, Thriller
-    Romantic: [10749], // Romance
-  };
+export const fetchMoviesByMood = async (mood: string): Promise<Movie[]> => {
+  if (!mood || !moodToGenreKeywords[mood]) {
+    throw new Error('Invalid mood specified');
+  }
 
-  const genreIds = moodToGenreMap[mood] || [];
+  const { genres = [], keywords = [] } = moodToGenreKeywords[mood];
+  
+  try {
+    // First try with both genres and keywords
+    let response = await fetch(
+      `https://api.themoviedb.org/3/discover/movie?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&with_genres=${genres.join(',')}&with_keywords=${keywords.join(',')}&sort_by=popularity.desc`
+    );
+    let data = await response.json();
 
+    // If we don't get enough results, try with just genres
+    if (data.results.length < 5 && genres.length > 0) {
+      response = await fetch(
+        `https://api.themoviedb.org/3/discover/movie?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&with_genres=${genres.join(',')}&sort_by=popularity.desc`
+      );
+      data = await response.json();
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching movies by mood:', error);
+    throw error;
+  }
+};
+
+export interface MovieDetails {
+  id: number;
+  title: string;
+  overview: string;
+  release_date: string;
+  genre_ids: number[];
+  poster_path: string | null;
+  backdrop_path: string | null;
+  vote_average: number;
+  vote_count: number;
+  download_links?: {
+    quality: string;
+    url: string;
+    size: string;
+  }[];
+}
+
+export async function getMovieDetails(movieId: string): Promise<MovieDetails> {
   const response = await fetch(
-    `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genreIds.join(',')}`
+    `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&append_to_response=credits,videos`
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch movies for mood: ${mood}`);
+    throw new Error('Failed to fetch movie details');
   }
 
+  const data = await response.json();
+
+  // For demonstration purposes, we'll add mock download links
+  // In a real application, you would get these from a legitimate source
+  const movieDetails = {
+    ...data,
+    download_links: [
+      {
+        quality: '1080p',
+        url: `/api/download/${movieId}/1080p`,
+        size: '2.1 GB'
+      },
+      {
+        quality: '720p',
+        url: `/api/download/${movieId}/720p`,
+        size: '1.3 GB'
+      }
+    ]
+  };
+
+  return movieDetails;
+}
+
+// Add this function to get legal watch providers
+export async function getWatchProviders(movieId: number) {
+  const response = await fetch(
+    `${TMDB_BASE_URL}/movie/${movieId}/watch/providers?api_key=${TMDB_API_KEY}`
+  );
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch watch providers');
+  }
+  
   return response.json();
 }
